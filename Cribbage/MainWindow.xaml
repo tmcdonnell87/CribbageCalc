@@ -1,0 +1,462 @@
+﻿<Window x:Class="Cribbage.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:src="clr-namespace:Cribbage" 
+        xmlns:scm="clr-namespace:System.ComponentModel;assembly=WindowsBase"
+        Name="ctlMainWindow"
+        Background="ForestGreen"
+        Title="Cribbage Evaluator" 
+        Height="600" 
+        Width="800"
+        MinHeight="600"
+        MinWidth="800">
+    <Window.CommandBindings>
+        <CommandBinding Command="ApplicationCommands.Help"
+                        Executed="HelpCommand_Executed"/>
+        <CommandBinding Command="ApplicationCommands.Close"
+                        
+                        Executed="CloseCommand_Executed"/>
+    </Window.CommandBindings>
+    <Grid DataContext="{Binding ElementName=ctlMainWindow}">
+        <Grid.Resources>
+            <CollectionViewSource x:Key="ResultsCV" x:Name="ResultsCV" Source="{Binding Path=Results}">
+                <CollectionViewSource.SortDescriptions>
+                    <scm:SortDescription PropertyName="ExpectedTotalPoints" Direction="Descending"/>
+                </CollectionViewSource.SortDescriptions>
+            </CollectionViewSource>
+        </Grid.Resources>
+        <Grid.Background>
+            <RadialGradientBrush GradientOrigin=".5,.5" 
+                                 RadiusX=".8"
+                                 RadiusY=".8">
+                <RadialGradientBrush.GradientStops>
+                    <GradientStop Color="LightGreen" Offset="0.35"/>
+                    <GradientStop Color="ForestGreen" Offset="1"/>
+                </RadialGradientBrush.GradientStops>
+            </RadialGradientBrush>
+        </Grid.Background>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+
+        </Grid.RowDefinitions>
+        <Menu Grid.Row="0">
+            <MenuItem Header="File">
+                <MenuItem Header="Quit"
+                          Name="ctlQuitMenu"
+                          InputGestureText="Alt-F4"
+                          Command="ApplicationCommands.Close"/>
+            </MenuItem>
+            <MenuItem Header="Help">
+                <MenuItem Header="About"
+                          Name="ctlAboutMenu" 
+                          Command="ApplicationCommands.Help"/>
+            </MenuItem>
+        </Menu>
+        <Grid Grid.Row="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="96"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Path=Hand.IsEvaluating}" Value="true">
+                            <Setter Property="IsEnabled" Value="False"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
+            <Grid Grid.Row="0"
+                  Grid.Column="0"
+                  Grid.RowSpan="2"
+                  Margin="2"
+                  VerticalAlignment="Center">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Label Name="ctlTest"/>
+                <Button Grid.Column="1"
+                        Content="Clear all"
+                            Name="ctlClearSelectedCardsButton"
+                            Click="ctlClearSelectedCardsButton_Click">
+                    <Button.Style>
+                        <Style BasedOn="{StaticResource optionButtonStyle}" TargetType="Button">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Path=Hand.Count}" Value="0">
+                                    <Setter Property="IsEnabled" Value="False"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+                <TextBlock Grid.Column="0"
+                           Grid.Row="1"
+                       VerticalAlignment="Center"                
+                        Style="{StaticResource labelTextBlockStyle}"
+                        Text="Enter card:"/>
+                <TextBox Width="100"
+                        Name="ctlCardTextBox"
+                    VerticalAlignment="Center"
+                         Grid.Row="1"
+                        TextChanged="ctlCardTextBox_TextChanged"
+                        ToolTip="Enter a card using the first letter of the rank, then the suit. For example, TC is the Ten of Clubs"
+                        Grid.Column="1">
+                    <TextBox.Text>
+                        <Binding ElementName="ctlMainWindow"
+                             Path="SelectedCard"
+                             Converter="{StaticResource CardToStringConverter}"
+                             UpdateSourceTrigger="PropertyChanged"
+                             Mode="OneWayToSource">
+                            <Binding.ValidationRules>
+                                <src:CardInputValidationRule />
+                            </Binding.ValidationRules>
+                        </Binding>
+
+                    </TextBox.Text>
+                    <TextBox.Style>
+                        <Style TargetType="TextBox" BasedOn="{StaticResource dataTextBoxStyle}">
+                        </Style>
+                    </TextBox.Style>
+                </TextBox>
+            </Grid>
+            
+            <TextBlock Grid.Column="1"
+                       Grid.Row="0"
+                       Text="Selected Cards"
+                       TextDecorations="Underline"
+                       FontSize="14"
+                       Style="{StaticResource labelTextBlockStyle}"
+                       HorizontalAlignment="Center"/>
+            
+            <ListView 
+                 HorizontalAlignment="Center"
+                Grid.Row="1"
+                Grid.Column="1"
+                Background="{x:Null}"
+                PreviewMouseDown="ctlHandListView_MouseDown"
+                  BorderThickness="0"
+                Name="ctlHandListView"
+                SelectionMode="Single"
+                  ItemsSource="{Binding Path=Hand.Cards}">
+                <ListView.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal"/>
+                    </ItemsPanelTemplate>
+                </ListView.ItemsPanel>
+                <ListView.ItemTemplate>
+                    <ItemContainerTemplate>
+                        <Label Height="80"
+                               Margin="0"
+                               Padding="0"
+                               ToolTip="{Binding Mode=OneWay}"
+                               Content="{Binding Path=Image}"/>
+                    </ItemContainerTemplate>
+                </ListView.ItemTemplate>
+                <ListView.Style>
+                    <Style TargetType="ListView">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Path=Hand.Count}" Value="0">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ListView.Style>
+            </ListView>
+            <TextBlock Grid.Row="1"
+                       Grid.Column="1"
+                   Text="No cards selected"
+                   FontStyle="Italic"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"
+                   FontSize="12">
+            <TextBlock.Style>
+                <Style TargetType="TextBlock">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Path=Hand.Count}" Value="0">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </TextBlock.Style>
+        </TextBlock>
+            <Expander Grid.Row="2"
+                  ExpandDirection="Down" 
+                  IsExpanded="False"
+                    Name="ctlCardSelectionExpander"
+                    Grid.ColumnSpan="2"                  >
+                <Expander.Header>
+                    <DockPanel LastChildFill="False">
+                        <TextBlock Text="Card Selection"
+                               Style="{StaticResource labelTextBlockStyle}"
+                               FontSize="12"
+                                   VerticalAlignment="Center"
+                               DockPanel.Dock="Left"/>
+                        <!--
+                        <Button Grid.Column="1"
+                        Content="Clear all"
+                                Margin="4,2,2,2"
+                            Name="ctlClearSelectedCardsButton"
+                            Click="ctlClearSelectedCardsButton_Click">
+                            <Button.Style>
+                                <Style BasedOn="{StaticResource optionButtonStyle}" TargetType="Button">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Path=Hand.Count}" Value="0">
+                                            <Setter Property="IsEnabled" Value="False"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                    -->
+                    </DockPanel>
+
+                </Expander.Header>
+                <ItemsControl ItemsSource="{Binding Path=SuitsOut}">
+                    <ItemsControl.Background>
+                        <SolidColorBrush Opacity=".25" Color="White"/>
+                    </ItemsControl.Background>
+                    <ItemsControl.ItemTemplate>                        
+                        <ItemContainerTemplate>
+                            <StackPanel Orientation="Horizontal">
+                                <StackPanel.Resources>
+                                    <CollectionViewSource x:Key="SuitsCV" Source="{Binding Path=Value}">
+                                        <CollectionViewSource.SortDescriptions>
+                                            <scm:SortDescription PropertyName="CardRank" Direction="Descending"/>
+                                        </CollectionViewSource.SortDescriptions>
+
+                                    </CollectionViewSource>
+                                </StackPanel.Resources>
+                                <Label Content="{Binding Path=Key, Converter={StaticResource EnumToImageConverter}}"
+                                       Height="36"
+                                       VerticalAlignment="Center"
+                                       Width="36"/>
+                                <ListBox BorderThickness="0"
+                                         Background="{x:Null}"
+                                         x:Name="ctlSuitCardSelectionListBox"
+                                         ItemsSource="{Binding Source={StaticResource SuitsCV}}"
+                                         PreviewMouseDown="SuitCards_PreviewMouseDown">
+                                    
+                                    <ListBox.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Orientation="Horizontal"/>
+                                        </ItemsPanelTemplate>
+                                    </ListBox.ItemsPanel>
+                                    <ListBox.ItemTemplate>
+                                        <ItemContainerTemplate>
+                                            <Label Height="54"
+                                                   Margin="0"
+                                                   Padding="0"
+                                                   ToolTip="{Binding Mode=OneWay}"
+                                                   Content="{Binding Path=Image}"/>
+                                        </ItemContainerTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </StackPanel>
+                        </ItemContainerTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Expander>
+
+        </Grid>
+        <DockPanel Grid.Row="2"
+                   LastChildFill="False"
+                   VerticalAlignment="Center"
+                   Name="ctlSubmitButton"
+                   Margin="2,8,2,2">
+            <DockPanel.Style>
+                <Style TargetType="DockPanel">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Path=Hand.IsEvaluating}" Value="true">
+                            <Setter Property="IsEnabled" Value="False"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </DockPanel.Style>
+
+            <Button Content="Submit"
+                    DockPanel.Dock="Left"
+                    Click="ctlSubmitButton_Click"
+                    Padding="16,2,16,2"
+                    ToolTipService.ShowOnDisabled="True"
+                    IsDefault="True">
+                <Button.Style>
+                    <Style TargetType="Button" BasedOn="{StaticResource optionButtonStyle}">
+                        <Setter Property="ToolTip" Value="Submit the hand for evaluation"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Path=Hand.Error, Converter={StaticResource StringDataConverter}}" Value="true">
+                                <Setter Property="IsEnabled" Value="False"/>
+                                <Setter Property="ToolTip" Value="{Binding ElementName=ctlMainWindow,Path=Hand.Error}"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>                     
+                             
+            </Button>
+          
+            <RadioButton VerticalAlignment="Center"
+                         Name="ctlOwnCribRadioButton"
+                         DockPanel.Dock="Left"
+                         Content="Own Crib"
+                         IsChecked="True"
+                         Style="{StaticResource standardRadioButtonStyle}"
+                         GroupName="Crib"/>
+            <RadioButton VerticalAlignment="Center"
+                         Name="ctlOpponentCribRadioButton"
+                         DockPanel.Dock="Left"
+                         Content="Opponent Crib"
+                         Style="{StaticResource standardRadioButtonStyle}"
+                         GroupName="Crib"/>
+
+
+        </DockPanel>
+        <DockPanel Grid.Row="3"
+                   Margin="2">
+            <DockPanel.Style>
+                <Style TargetType="DockPanel">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Path=Hand.IsEvaluating}" Value="true">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </DockPanel.Style>
+            <Button DockPanel.Dock="Left"
+                    Style="{StaticResource optionButtonStyle}"
+                    Content="Cancel"
+                    Name="ctlCancelEvaluationButton"
+                    Click="ctlCancelEvaluationButton_Click"/>
+            <ProgressBar DockPanel.Dock="Right"
+                         Name="ctlEvaluationProgressBar"
+                         Style="{StaticResource standardProgressBarStyle}"
+                         Value="{Binding Path=ProgressPercentage}"/>
+        </DockPanel>
+        <DataGrid   Grid.Row="4"
+                    Name="ctlResultDataGrid"
+                    SelectionUnit="FullRow" 
+                    IsReadOnly="True"
+                    KeyboardNavigation.AcceptsReturn="False"
+                    AutoGenerateColumns="False" 
+                    ItemsSource="{Binding Source={StaticResource ResultsCV}}"
+                  Opacity=".75">
+            <DataGrid.RowDetailsTemplate>
+                <ItemContainerTemplate>
+                    <Grid Margin="8,2,2,2">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Row="0"
+                                   Grid.Column="0"
+                                   Text="Metric"
+                                   TextDecorations="Underline"
+                                   Style="{StaticResource labelTextBlockStyle}"/>
+                        <TextBlock Grid.Row="0"
+                                   Grid.Column="1"
+                                   Text="Points"
+                                   Margin="6,2,2,2"
+                                   TextDecorations="Underline"
+                                   Style="{StaticResource labelTextBlockStyle}"/>
+                       <TextBlock Grid.Row="1"
+                                   Grid.Column="0"
+                                   Text="Guaranteed points in hand"
+                                   Style="{StaticResource labelTextBlockStyle}"/>
+                        <TextBlock Grid.Row="1"
+                                   Grid.Column="1"
+                                   Text="{Binding Path=GuaranteedHandPoints}"
+                                   Style="{StaticResource labelTextBlockStyle}"/>
+                        <TextBlock Grid.Row="2"
+                                   Grid.Column="0"
+                                   Text="Maximum points in hand"
+                                   Style="{StaticResource labelTextBlockStyle}"/>
+                        <TextBlock Grid.Row="2"
+                                   Grid.Column="1"
+                                   Text="{Binding Path=MaximumHandPoints}"
+                                   Style="{StaticResource labelTextBlockStyle}"/>
+
+                        <TextBlock Grid.Row="3"
+                                   Grid.Column="0"
+                                   Text="Maximum crib points"
+                                   Style="{StaticResource labelTextBlockStyle}"/>
+                        <TextBlock Grid.Row="3"
+                                   Grid.Column="1"
+                                   Text="{Binding Path=MaximumCribPoints}"
+                                   Style="{StaticResource labelTextBlockStyle}"/>
+
+
+                    </Grid>
+                </ItemContainerTemplate>
+            </DataGrid.RowDetailsTemplate>
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Selected Cards" 
+                                    x:Name="ctlCardsColumn"
+                                    Width="*"
+                                    Binding="{Binding Path=Description}"
+                                    CellStyle="{StaticResource dataGridCellStyle}"
+                                    ElementStyle="{StaticResource gridNormalStyle}"/>
+                <DataGridTextColumn Header="Expected Total" 
+                                    x:Name="ctlExpectedTotalColumn"
+                                    Width="Auto"
+                                    Binding="{Binding Path=ExpectedTotalPoints, StringFormat=#.##}"
+                                    CellStyle="{StaticResource dataGridCellStyle}"
+                                    ElementStyle="{StaticResource gridNormalStyle}"/>
+                <DataGridTextColumn Header="Exp. Hand" 
+                                    x:Name="ctlHandTotalColumn"
+                                    Width="Auto"
+                                    Binding="{Binding Path=ExpectedHandPoints, StringFormat=#.##}"
+                                    CellStyle="{StaticResource dataGridCellStyle}"
+                                    ElementStyle="{StaticResource gridNormalStyle}"/>
+                <DataGridTextColumn Header="Exp. Crib" 
+                                    x:Name="ctlCribTotalColumn"
+                                    Width="Auto"
+                                    Binding="{Binding Path=ExpectedCribPoints, StringFormat=#.##}"
+                                    CellStyle="{StaticResource dataGridCellStyle}"
+                                    ElementStyle="{StaticResource gridNormalStyle}"/>
+                <DataGridTextColumn Header="Min. Crib" 
+                                    x:Name="ctlMinimumCribPointsColumn"
+                                    Width="Auto"
+                                    Binding="{Binding Path=MinimumCribPoints}"
+                                    CellStyle="{StaticResource dataGridCellStyle}"
+                                    ElementStyle="{StaticResource gridNormalStyle}"/>
+                <DataGridTextColumn Header="Guar. Points" 
+                                    x:Name="ctlGuaranteedPointsColumn"
+                                    Width="Auto"
+                                    Binding="{Binding Path=GuaranteedPoints}"
+                                    CellStyle="{StaticResource dataGridCellStyle}"
+                                    ElementStyle="{StaticResource gridNormalStyle}"/>
+                <DataGridTextColumn Header="Max. Points" 
+                                    x:Name="ctlMaximumPointsColumn"
+                                    Width="Auto"
+                                    Binding="{Binding Path=MaximumPoints}"
+                                    CellStyle="{StaticResource dataGridCellStyle}"
+                                    ElementStyle="{StaticResource gridNormalStyle}"/>
+
+
+            </DataGrid.Columns>
+        </DataGrid>
+        
+
+    </Grid>
+</Window>
